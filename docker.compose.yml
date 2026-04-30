@@ -1,0 +1,61 @@
+services:
+  # 1. Database (MariaDB)
+  lenshub-db:
+    image: mariadb:10.11
+    container_name: lenshub-db
+    restart: always
+    environment:
+      # Map variabel .env Laravel ke format MariaDB
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_DATABASE}
+      MARIADB_USER: ${DB_USERNAME}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - lenshub-db-data:/var/lib/mysql
+    networks:
+      - lenshub-net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Application (PHP-FPM)
+  lenshub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lenshub
+    restart: always
+    depends_on:
+      lenshub-db:
+        condition: service_healthy
+    volumes:
+      - ./.env:/var/www/html/.env
+      - ./storage:/var/www/html/storage
+    networks:
+      - lenshub-net
+
+  # 3. Web Server (Nginx)
+  lenshub-nginx:
+    image: nginx:alpine
+    container_name: lenshub-nginx
+    restart: always
+    depends_on:
+      - lenshub
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/html
+    networks:
+      - lenshub-net
+      - npm-network # Network luar untuk Nginx Proxy Manager
+
+networks:
+  lenshub-net:
+    driver: bridge
+  npm-network:
+    external: true
+
+volumes:
+  lenshub-db-data:
+    driver: local
