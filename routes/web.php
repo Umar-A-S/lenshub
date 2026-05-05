@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Rental;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GearController;
 // use App\Http\Controllers\ReportController;
 // use App\Http\Controllers\StatController;
 
@@ -33,5 +34,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     // Route::get('/admin/statistik', [StatController::class, 'index']); // Otomatis terjaga!
 });
 
+// Route untuk admin mengelola alat (CRUD)
+Route::prefix('admin/gears')->group(function () {
+    // Update status operasional (available, maintenance, etc.)
+    Route::patch('/{gear}/status/{status}', [GearController::class, 'updateStatus'])->name('gears.update-status');
+    
+    // Update kondisi fisik (baik, rusak, etc.)
+    Route::patch('/{gear}/condition/{condition}', [GearController::class, 'updateCondition'])->name('gears.update-condition');
+});
 
 require __DIR__.'/auth.php';
