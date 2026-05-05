@@ -43,4 +43,14 @@ Route::prefix('admin/gears')->group(function () {
     Route::patch('/{gear}/condition/{condition}', [GearController::class, 'updateCondition'])->name('gears.update-condition');
 });
 
+/**
+ * Route CRUD untuk manajemen inventaris.
+ * Fokus pada penambahan unit baru dan penghapusan aman (Soft Delete).
+ */
+Route::prefix('admin/gears')->group(function () {
+    Route::post('/', [GearController::class, 'store'])->name('gears.store');
+    Route::get('/{gear}/edit', [GearController::class, 'edit'])->name('gears.edit');
+    Route::put('/{gear}', [GearController::class, 'update'])->name('gears.update');
+    Route::delete('/{gear}', [GearController::class, 'destroy'])->name('gears.destroy');
+});
 require __DIR__.'/auth.php';
