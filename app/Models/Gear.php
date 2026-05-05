@@ -81,4 +81,21 @@ class Gear extends Model
             }
         });
     }
+
+    /**
+     * Scope untuk menyaring barang berdasarkan kategori.
+     * Memudahkan pemanggilan: Gear::byCategory(1)->get();
+     */
+    public function scopeByCategory($query, $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * Scope untuk menyaring barang yang sedang tersedia.
+     */
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available');
+    }
 }

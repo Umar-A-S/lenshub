@@ -60,4 +60,99 @@ class GearController extends Controller
 
         return back()->with('success', "Kondisi unit {$gear->unit_code} diperbarui dan tercatat di riwayat.");
     }
+
+    /**
+     * Menyimpan unit barang baru ke database.
+     * Logika unit_code otomatis dijalankan di Model Gear (booted method).
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name'        => 'required|string|max:255',
+            'rent_price'  => 'required|numeric',
+            'penalty_fee' => 'required|numeric',
+            'photo'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        $data = $request->all();
+
+        // Logika upload foto jika admin menyertakan gambar
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('gears', 'public');
+        }
+
+        Gear::create($data);
+
+        return redirect()->route('gears.index')->with('success', 'Unit baru berhasil ditambahkan.');
+    }
+
+    /**
+     * Memperbarui informasi dasar unit barang.
+     */
+    public function update(Request $request, Gear $gear)
+    {
+        $request->validate([
+            'name'        => 'required|string|max:255',
+            'rent_price'  => 'required|numeric',
+            'penalty_fee' => 'required|numeric',
+        ]);
+
+        $data = $request->all();
+
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('gears', 'public');
+        }
+
+        $gear->update($data);
+
+        return redirect()->route('gears.index')->with('success', 'Informasi unit berhasil diperbarui.');
+    }
+
+    /**
+     * Menghapus unit barang secara halus (Soft Delete).
+     * Data tetap ada di database tapi tidak muncul di query reguler.
+     */
+    public function destroy(Gear $gear)
+    {
+        $gear->delete(); // Ini otomatis memicu SoftDeletes trait
+
+        return back()->with('success', "Unit {$gear->unit_code} berhasil dipindahkan ke tempat sampah.");
+    }
+
+    /**
+     * Fitur duplikasi cepat: membuat unit baru berdasarkan data unit yang sudah ada.
+     * Berguna saat admin menambah stok barang yang sama (misal: tambah 5 unit lensa).
+     */
+    public function duplicate(Gear $gear)
+    {
+        $newUnit = $gear->replicate(); // Salin semua data kecuali ID dan timestamps
+        $newUnit->unit_code = null; // Set null agar memicu pembuatan kode otomatis baru (CAM_002, dst)
+        $newUnit->status = 'available'; // Reset status ke tersedia
+        $newUnit->save();
+
+        return back()->with('success', "Berhasil menggandakan unit {$gear->name}. Kode unit baru: {$newUnit->unit_code}");
+    }
+
+    /**
+     * Menampilkan daftar seluruh unit barang.
+     * Mendukung filter berdasarkan kategori melalui query string (?category=id).
+     */
+    public function index(Request $request)
+    {
+        // Mengambil semua kategori untuk ditampilkan di tombol filter
+        $categories = \App\Models\Category::all();
+
+        // Query dasar dengan relasi kategori agar tidak boros query (Eager Loading)
+        $query = Gear::with('category');
+
+        // Jika admin memilih kategori tertentu (lewat klik tombol kategori)
+        if ($request->has('category_id')) {
+            $query->byCategory($request->category_id);
+        }
+
+        $gears = $query->latest()->get();
+
+        return view('admin.gears.index', compact('gears', 'categories'));
+    }
 }
