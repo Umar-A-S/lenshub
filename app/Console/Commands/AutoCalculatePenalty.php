@@ -2,36 +2,56 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use App\Models\Rental;
+use Carbon\Carbon;
 
-#[Signature('app:auto-calculate-penalty')]
-#[Description('Command description')]
 class AutoCalculatePenalty extends Command
 {
-    /**
-     * Execute the console command.
-     */
+    protected $signature = 'app:auto-calculate-penalty';
+    protected $description = 'Menghitung denda otomatis untuk penyewaan yang melewati batas waktu';
+
     public function handle()
     {
-        // Ambil semua rental yang statusnya masih 'active' dan sudah melewati 'end_date'
-        $overdueRentals = Rental::where('status', 'active')
-            ->where('end_date', '<', now())
+        // 1. Ambil rental yang 'active' DAN udah lewat 2 jam dari end_date
+        $batasWaktuKenaDenda = Carbon::now()->subHours(2);
+        
+        $dataRentalTelat = Rental::where('status', 'active')
+            ->where('end_date', '<', $batasWaktuKenaDenda)
+            ->with('gear') // Eager load biar nggak N+1 query
             ->get();
 
-        foreach ($overdueRentals as $rental) {
-            $hariTerlambat = now()->diffInDays($rental->end_date);
+        $this->info("Ditemukan " . $dataRentalTelat->count() . " transaksi kena denda.");
+
+        foreach ($dataRentalTelat as $rental) {
+            // 2. $rental->end_date otomatis Carbon kalau di Model udah di casts
+            $dueDate = $rental->end_date; 
+            $batasGratis = $dueDate->copy()->addHours(2);
+            $sekarang = Carbon::now();
+
+            // 3. Hitung selisih hari. Lewat 1 detik dari batas = 1 hari
+            $selisihJam = $sekarang->diffInHours($batasGratis);
+            $hariTerlambat = 0;
             
-            // Misal denda flat Rp 50.000 per hari
-            $dendaPerHari = 50000; 
-            $totalDenda = $hariTerlambat * $dendaPerHari;
+            if ($selisihJam >= 0) { // Pastikan emang udah lewat
+                $hariTerlambat = (int) ceil($selisihJam / 24); // 1 jam = 1 hari, 25 jam = 2 hari
+            }
 
-            $rental->update([
-                'penalty_amount' => $totalDenda
-            ]);
+            if ($hariTerlambat > 0) {
+                $dendaPerHari = $rental->gear->penalty_fee ?? 0; 
+                $totalDenda = $hariTerlambat * $dendaPerHari;
 
-            $this->info("User {$rental->user_id} telat {$hariTerlambat} hari. Denda: {$totalDenda}");
+                // 4. Update database
+                $rental->update([
+                    'penalty_amount' => $totalDenda,
+                    'total_days_late' => $hariTerlambat, // Simpen sekalian
+                    'note' => "Sistem: Terlambat {$hariTerlambat} hari. Denda update " . Carbon::now()->format('d-m-Y H:i')
+                ]);
+
+                $this->info("ID {$rental->id} ({$rental->gear->name}): Telat {$hariTerlambat} hari. Denda Rp" . number_format($totalDenda));
+            }
         }
+
+        $this->info("Proses selesai.");
     }
 }
