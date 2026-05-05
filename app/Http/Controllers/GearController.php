@@ -133,4 +133,26 @@ class GearController extends Controller
 
         return back()->with('success', "Berhasil menggandakan unit {$gear->name}. Kode unit baru: {$newUnit->unit_code}");
     }
+
+    /**
+     * Menampilkan daftar seluruh unit barang.
+     * Mendukung filter berdasarkan kategori melalui query string (?category=id).
+     */
+    public function index(Request $request)
+    {
+        // Mengambil semua kategori untuk ditampilkan di tombol filter
+        $categories = \App\Models\Category::all();
+
+        // Query dasar dengan relasi kategori agar tidak boros query (Eager Loading)
+        $query = Gear::with('category');
+
+        // Jika admin memilih kategori tertentu (lewat klik tombol kategori)
+        if ($request->has('category_id')) {
+            $query->byCategory($request->category_id);
+        }
+
+        $gears = $query->latest()->get();
+
+        return view('admin.gears.index', compact('gears', 'categories'));
+    }
 }
