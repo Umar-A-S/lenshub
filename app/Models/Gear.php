@@ -2,29 +2,56 @@
 
 namespace App\Models;
 
+/**
+ * Model Gear
+ * Mengelola data alat yang disewakan, termasuk informasi kategori, harga, status, dan kondisi.
+ * Setiap baris mewakili satu unit alat dengan kode unik (unit_code).
+ * Fitur Soft Delete digunakan untuk menjaga data tetap aman saat dihapus.
+ */
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes; // Tambahkan ini untuk fitur Soft Delete
 
 class Gear extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes; // Gunakan SoftDeletes agar data tidak benar-benar hilang saat dihapus
 
     /**
-     * fillable digunakan untuk menentukan kolom mana saja yang boleh diisi
-     * secara massal (Mass Assignment). Ini penting untuk keamanan.
+     * Update fillable:
+     * - Hapus 'category' (karena sekarang pakai category_id)
+     * - Hapus 'total_units' (karena 1 baris = 1 unit)
+     * - Tambahkan unit_code, status, dan condition_status
      */
     protected $fillable = [
+        'category_id',
         'name',
-        'category',
-        'total_units',
+        'unit_code',
         'rent_price',
         'penalty_fee',
-        'description'
+        'status',
+        'condition_status',
+        'photo'
     ];
 
     /**
-     * Relasi: Satu alat (Gear) bisa memiliki banyak transaksi penyewaan (Rentals).
-     * Kita menggunakan ::class untuk merujuk ke model Rental.
+     * Relasi: Satu unit barang masuk ke dalam satu kategori.
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Relasi: Satu unit barang bisa memiliki banyak catatan riwayat kondisi.
+     */
+    public function conditionLogs()
+    {
+        return $this->hasMany(GearConditionLog::class);
+    }
+
+    /**
+     * Relasi: Satu unit barang bisa memiliki banyak transaksi penyewaan (Rentals).
      */
     public function rentals()
     {
