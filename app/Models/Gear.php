@@ -57,4 +57,28 @@ class Gear extends Model
     {
         return $this->hasMany(Rental::class);
     }
+
+    /**
+     * Method boot untuk menjalankan logika otomatis saat model berinteraksi dengan database.
+     */
+    protected static function booted()
+    {
+        static::creating(function ($gear) {
+            // Hanya jalankan jika unit_code belum diisi secara manual
+            if (!$gear->unit_code) {
+                $category = $gear->category; // Mengambil relasi kategori
+                
+                if ($category) {
+                    // Ambil nomor urut berikutnya
+                    $nextNumber = $category->getNextUnitNumber();
+                    
+                    // Format nomor menjadi 3 digit (misal: 1 jadi 001)
+                    $formattedNumber = str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+                    
+                    // Gabungkan prefix kategori dengan nomor urut
+                    $gear->unit_code = "{$category->prefix}_{$formattedNumber}";
+                }
+            }
+        });
+    }
 }
