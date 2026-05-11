@@ -2,55 +2,102 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Models\Rental;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GearController;
-// use App\Http\Controllers\ReportController;
-// use App\Http\Controllers\StatController;
+use App\Http\Controllers\RentalController;
+
+/*
+|--------------------------------------------------------------------------
+| 1. HALAMAN UTAMA & AUTH (LOGOUT/LOGIN)
+|--------------------------------------------------------------------------
+| Bagian ini mengatur apa yang pertama kali dilihat pengunjung.
+*/
 
 Route::get('/', function () {
-    return view('welcome');
+    // Kalau buka web, langsung diarahkan ke halaman login
+    return view('auth.login');
 });
 
-Route::get('/debug-rentals', function () {
-    $rentals = Rental::with('gear', 'user')->get();
-    return view('debug-rentals', compact('rentals'));
+Route::get('/register', function () {
+    // Kalau buka halaman register, langsung diarahkan ke halaman login (karena kita tidak pakai fitur register)
+    return redirect('/login');
+})->name('register');
+
+// Mengambil pengaturan akun dari file auth.php (bawaan Laravel)
+require __DIR__.'/auth.php';
+
+
+/*
+|--------------------------------------------------------------------------
+| 2. AREA KHUSUS PEMILIK (OWNER)
+|--------------------------------------------------------------------------
+| Hanya bisa dibuka oleh pengguna yang sudah login dan punya peran 'owner'.
+*/
+
+Route::middleware(['auth', 'role:owner'])->prefix('owner')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('owner.dashboard');
+    
+    // Rencana kedepan: Laporan & Statistik (saat ini masih dimatikan)
+    // Route::get('/laporan-keuangan', [ReportController::class, 'index']);
 });
 
-// Route khusus untuk memicu "Robot" Penalty via tombol
+
+/*
+|--------------------------------------------------------------------------
+| 3. AREA KHUSUS ADMIN (PENGELOLA)
+|--------------------------------------------------------------------------
+| Bagian ini untuk admin mengelola transaksi, denda, dan inventaris alat.
+*/
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+    
+    // --- Dashboard Admin ---
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // --- Manajemen Alat (Gear) ---
+    // Di sini admin bisa Tambah, Edit, Update Status, dan Hapus alat.
+    Route::controller(GearController::class)->prefix('gears')->group(function () {
+        Route::get('/', 'index')->name('gears.index');          // Lihat daftar alat
+        Route::post('/', 'store')->name('gears.store');         // Simpan alat baru
+        Route::get('/{gear}/edit', 'edit')->name('gears.edit'); // Buka form edit
+        Route::put('/{gear}', 'update')->name('gears.update');   // Proses simpan perubahan
+        Route::delete('/{gear}', 'destroy')->name('gears.destroy'); // Hapus alat
+
+        // Fitur ganti status (Tersedia/Rusak/Maintenance)
+        Route::patch('/{gear}/status/{status}', 'updateStatus')->name('gears.update-status');
+        Route::patch('/{gear}/condition/{condition}', 'updateCondition')->name('gears.update-condition');
+    });
+
+    // --- Manajemen Transaksi (Rental) ---
+    // Mengatur penyewaan, pengembalian, dan denda otomatis.
+    Route::controller(RentalController::class)->prefix('rentals')->group(function () {
+        Route::get('/', 'index')->name('rentals.index');
+        Route::post('/{rental}/return', 'returnGear')->name('rentals.return');
+        
+        // Tombol rahasia admin untuk simulasi telat balikin (untuk tes denda)
+        Route::patch('/{rental}/simulate-overdue', 'simulateOverdue')->name('rentals.simulate');
+    });
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| 4. FITUR PEMBANTU / DEBUGGING (KHUSUS PENGEMBANG)
+|--------------------------------------------------------------------------
+| Fitur ini sebaiknya dihapus atau dimatikan jika web sudah online (Production).
+*/
+
+// Tombol manual untuk menyuruh "Robot" mengecek denda saat ini juga
 Route::post('/run-penalty-check', function () {
     Artisan::call('app:auto-calculate-penalty');
     return back()->with('status', 'Robot Penalty telah dijalankan!');
 });
-Route::middleware(['auth', 'role:owner'])->group(function () {
-    Route::get('/owner/dashboard', [DashboardController::class, 'index'])->name('owner.dashboard');
-    // Route::get('/owner/laporan-keuangan', [ReportController::class, 'index']); // Otomatis terjaga!
-    // Route::get('/owner/statistik', [StatController::class, 'index']); // Otomatis terjaga!
-});
 
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-    // Route::get('/admin/laporan-keuangan', [ReportController::class, 'index']); // Otomatis terjaga!
-    // Route::get('/admin/statistik', [StatController::class, 'index']); // Otomatis terjaga!
+// Halaman rahasia untuk melihat data mentah transaksi (Cek error data)
+Route::get('/debug-rentals', function () {
+    $rentals = Rental::with('gear', 'user')->get();
+    return view('debug-rentals', compact('rentals'));
 });
-
-// Route untuk admin mengelola alat (CRUD)
-Route::prefix('admin/gears')->group(function () {
-    // Update status operasional (available, maintenance, etc.)
-    Route::patch('/{gear}/status/{status}', [GearController::class, 'updateStatus'])->name('gears.update-status');
-    
-    // Update kondisi fisik (baik, rusak, etc.)
-    Route::patch('/{gear}/condition/{condition}', [GearController::class, 'updateCondition'])->name('gears.update-condition');
-});
-
-/**
- * Route CRUD untuk manajemen inventaris.
- * Fokus pada penambahan unit baru dan penghapusan aman (Soft Delete).
- */
-Route::prefix('admin/gears')->group(function () {
-    Route::post('/', [GearController::class, 'store'])->name('gears.store');
-    Route::get('/{gear}/edit', [GearController::class, 'edit'])->name('gears.edit');
-    Route::put('/{gear}', [GearController::class, 'update'])->name('gears.update');
-    Route::delete('/{gear}', [GearController::class, 'destroy'])->name('gears.destroy');
-});
-require __DIR__.'/auth.php';
