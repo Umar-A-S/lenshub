@@ -1,158 +1,121 @@
 <?php
 
+/* Catatan untuk Pengembang:
+Controller Gear ini adalah pusat pengelolaan alat di gudang. Berikut penjelasan fungsinya:
+    1.  Index: 
+        Menampilkan semua daftar barang yang ada. Di bagian View, fungsi ini bisa menerima filter kategori jika kamu mengirimkan parameter category_id melalui link atau dropdown pencarian.
+
+    2.  Store: 
+        Untuk add gear baru ke database. Fungsi ini secara otomatis membuatkan kode unik (seperti CAM_001) dan mengelola unggahan foto; pastikan form di View memiliki atribut enctype="multipart/form-data".
+
+    3.  updateStatus: 
+        Fitur aksi cepat untuk mengubah status operasional barang (contoh: dari Available ke Maintenance). Di View, kamu cukup membuat tombol yang mengarah ke URL route dengan menyertakan parameter status yang diinginkan.
+
+    4.  updateCondition: 
+        Memperbarui kondisi fisik barang (seperti 'baik' atau 'rusak') sekaligus mencatat riwayat perubahannya ke tabel GearConditionLog. Admin bisa menyertakan catatan tambahan melalui query string note di URL atau input form.
+
+    5.  duplicate: 
+        Mempermudah penambahan stok untuk barang yang tipenya sama. Fungsi ini akan menyalin data barang lama ke baris baru tetapi tetap memberikan nomor urut (unit_code) yang baru agar tetap unik.
+
+    6.  destroy: 
+        Menghapus data menggunakan sistem Soft Delete. Barang tidak akan hilang permanen dari database, hanya tidak muncul di daftar aktif, sehingga riwayat transaksi lama tetap aman dan tidak error.
+
+    Pemanggilan di View: 
+        Gunakan elemen <form> dengan @method('POST') atau @method('DELETE') untuk aksi yang mengubah data (store, destroy, duplicate) demi keamanan, sedangkan untuk update status/kondisi bisa menggunakan link <a> atau tombol yang diarahkan ke route spesifik.
+*/
+
+
 namespace App\Http\Controllers;
 
 use App\Models\Gear;
+use App\Models\Category;
 use App\Models\GearConditionLog;
 use Illuminate\Http\Request;
 
-/**
- * GearController
- * Mengelola logika inventaris barang dengan sistem aksi cepat (button-driven).
- * Fitur utama:
- * 1. Update status operasional (available, booked, rented, maintenance) dengan satu klik.
- * 2. Update kondisi fisik (baik, rusak, hilang, maintenance) dengan catatan otomatis ke log riwayat kondisi.
- * 3. Validasi input untuk memastikan status dan kondisi yang dimasukkan sesuai dengan opsi yang tersedia.
- * 4. Integrasi dengan model GearConditionLog untuk mencatat setiap perubahan kondisi secara otomatis, sehingga admin tidak perlu input manual.
- */
 class GearController extends Controller
 {
-    /**
-     * Memperbarui status operasional barang (Tersedia, Maintenance, dll).
-     */
-    public function updateStatus(Gear $gear, $status)
-    {
-        $validStatuses = ['available', 'booked', 'rented', 'maintenance'];
-
-        if (!in_array($status, $validStatuses)) {
-            return back()->with('error', 'Status tidak valid.');
-        }
-
-        $gear->update(['status' => $status]);
-
-        return back()->with('success', "Status unit {$gear->unit_code} berhasil diubah menjadi $status.");
-    }
-
-    /**
-     * Memperbarui kondisi fisik barang dan mencatatnya ke history log.
-     */
-    public function updateCondition(Request $request, Gear $gear, $condition)
-    {
-        $validConditions = ['baik', 'rusak', 'service', 'sensor kotor'];
-
-        if (!in_array($condition, $validConditions)) {
-            return back()->with('error', 'Kondisi tidak valid.');
-        }
-
-        // Simpan kondisi lama sebelum diupdate untuk kebutuhan log
-        $oldCondition = $gear->condition_status;
-
-        // Update kondisi di tabel gears
-        $gear->update(['condition_status' => $condition]);
-
-        // Buat catatan log riwayat kondisi secara otomatis
-        GearConditionLog::create([
-            'gear_id' => $gear->id,
-            'condition_before' => $oldCondition,
-            'condition_after' => $condition,
-            'note' => $request->query('note') ?? "Perubahan kondisi manual oleh admin."
-        ]);
-
-        return back()->with('success', "Kondisi unit {$gear->unit_code} diperbarui dan tercatat di riwayat.");
-    }
-
-    /**
-     * Menyimpan unit barang baru ke database.
-     * Logika unit_code otomatis dijalankan di Model Gear (booted method).
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name'        => 'required|string|max:255',
-            'rent_price'  => 'required|numeric',
-            'penalty_fee' => 'required|numeric',
-            'photo'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
-
-        $data = $request->all();
-
-        // Logika upload foto jika admin menyertakan gambar
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('gears', 'public');
-        }
-
-        Gear::create($data);
-
-        return redirect()->route('gears.index')->with('success', 'Unit baru berhasil ditambahkan.');
-    }
-
-    /**
-     * Memperbarui informasi dasar unit barang.
-     */
-    public function update(Request $request, Gear $gear)
-    {
-        $request->validate([
-            'name'        => 'required|string|max:255',
-            'rent_price'  => 'required|numeric',
-            'penalty_fee' => 'required|numeric',
-        ]);
-
-        $data = $request->all();
-
-        if ($request->hasFile('photo')) {
-            $data['photo'] = $request->file('photo')->store('gears', 'public');
-        }
-
-        $gear->update($data);
-
-        return redirect()->route('gears.index')->with('success', 'Informasi unit berhasil diperbarui.');
-    }
-
-    /**
-     * Menghapus unit barang secara halus (Soft Delete).
-     * Data tetap ada di database tapi tidak muncul di query reguler.
-     */
-    public function destroy(Gear $gear)
-    {
-        $gear->delete(); // Ini otomatis memicu SoftDeletes trait
-
-        return back()->with('success', "Unit {$gear->unit_code} berhasil dipindahkan ke tempat sampah.");
-    }
-
-    /**
-     * Fitur duplikasi cepat: membuat unit baru berdasarkan data unit yang sudah ada.
-     * Berguna saat admin menambah stok barang yang sama (misal: tambah 5 unit lensa).
-     */
-    public function duplicate(Gear $gear)
-    {
-        $newUnit = $gear->replicate(); // Salin semua data kecuali ID dan timestamps
-        $newUnit->unit_code = null; // Set null agar memicu pembuatan kode otomatis baru (CAM_002, dst)
-        $newUnit->status = 'available'; // Reset status ke tersedia
-        $newUnit->save();
-
-        return back()->with('success', "Berhasil menggandakan unit {$gear->name}. Kode unit baru: {$newUnit->unit_code}");
-    }
-
-    /**
-     * Menampilkan daftar seluruh unit barang.
-     * Mendukung filter berdasarkan kategori melalui query string (?category=id).
-     */
+    // Menampilkan daftar alat
     public function index(Request $request)
     {
-        // Mengambil semua kategori untuk ditampilkan di tombol filter
-        $categories = \App\Models\Category::all();
-
-        // Query dasar dengan relasi kategori agar tidak boros query (Eager Loading)
-        $query = Gear::with('category');
-
-        // Jika admin memilih kategori tertentu (lewat klik tombol kategori)
-        if ($request->has('category_id')) {
-            $query->byCategory($request->category_id);
-        }
-
-        $gears = $query->latest()->get();
+        $categories = Category::all();
+        
+        // Pakai with('category') supaya loading data lebih cepat (Eager Loading)
+        $gears = Gear::with('category')
+            ->when($request->category_id, function($q) use ($request) {
+                return $q->where('category_id', $request->category_id);
+            })
+            ->latest()
+            ->get();
 
         return view('admin.gears.index', compact('gears', 'categories'));
+    }
+
+    // Simpan alat baru
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name'        => 'required|string',
+            'rent_price'  => 'required|numeric',
+            'penalty_fee' => 'required|numeric',
+            'photo'       => 'nullable|image|max:2048',
+        ]);
+
+        // Cari kategori untuk generate kode unik
+        $category = Category::findOrFail($request->category_id);
+        $validated['unit_code'] = $category->generateNewCode();
+
+        // Urus foto jika ada
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('gears', 'public');
+        }
+
+        Gear::create($validated);
+
+        return redirect()->route('gears.index')->with('success', 'Barang baru berhasil ditambah.');
+    }
+
+    // Update status (Tersedia/Disewa/Maintenance) - Tombol Cepat
+    public function updateStatus(Gear $gear, $status)
+    {
+        $gear->update(['status' => $status]);
+
+        return back()->with('success', "Status {$gear->unit_code} sekarang: $status.");
+    }
+
+    // Update kondisi fisik + Otomatis catat ke riwayat
+    public function updateCondition(Request $request, Gear $gear, $condition)
+    {
+        // Simpan riwayat perubahan sebelum diupdate
+        GearConditionLog::create([
+            'gear_id'          => $gear->id,
+            'condition_before' => $gear->condition_status,
+            'condition_after'  => $condition,
+            'note'             => $request->note ?? "Update manual admin"
+        ]);
+
+        $gear->update(['condition_status' => $condition]);
+
+        return back()->with('success', "Kondisi {$gear->unit_code} berhasil diperbarui.");
+    }
+
+    // Duplikasi barang (Tambah stok barang yang sama dengan cepat)
+    public function duplicate(Gear $gear)
+    {
+        $newGear = $gear->replicate();
+        
+        // Generate kode baru supaya tidak bentrok
+        $newGear->unit_code = $gear->category->generateNewCode();
+        $newGear->status    = 'available';
+        $newGear->save();
+
+        return back()->with('success', "Barang berhasil digandakan dengan kode: {$newGear->unit_code}");
+    }
+
+    // Hapus barang (Soft Delete)
+    public function destroy(Gear $gear)
+    {
+        $gear->delete();
+        return back()->with('success', 'Barang berhasil dihapus.');
     }
 }

@@ -18,8 +18,23 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+            // membuat seed akun owner dan admin sekaligus untuk testing
+            'name' => 'Owner',
+            'email' => 'owner@example.com',
+            'password' => bcrypt('ownerpassword'),
+            'role' => 'owner',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('adminpassword'),
+            'role' => 'admin',
+        ]);
+
+        $this->call([
+            InventorySeeder::class,
+            RentalSeeder::class,
         ]);
     }
 }
