@@ -5,28 +5,40 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Category;
 use App\Models\Gear;
+use Illuminate\Support\Str;
 
 class InventorySeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat Kategori Master
-        $cam = Category::create(['name' => 'Kamera', 'slug' => 'kamera', 'prefix' => 'CAM']);
-        $lens = Category::create(['name' => 'Lensa', 'slug' => 'lensa', 'prefix' => 'LENS']);
+        // 1. Definisi Kategori
+        $categories = [
+            ['name' => 'Kamera', 'prefix' => 'CAM'],
+            ['name' => 'Lensa', 'prefix' => 'LENS'],
+            ['name' => 'Drone', 'prefix' => 'DRN'],
+        ];
 
-        // 2. Buat Unit Gear (Kode unit akan terisi otomatis via Model Booting kita tadi)
-        Gear::create([
-            'category_id' => $cam->id,
-            'name' => 'Sony A7III',
-            'rent_price' => 150000,
-            'penalty_fee' => 50000,
-        ]);
+        foreach ($categories as $catData) {
+            // Buat Kategori
+            $category = Category::create([
+                'name' => $catData['name'],
+                'slug' => Str::slug($catData['name']),
+                'prefix' => $catData['prefix']
+            ]);
 
-        Gear::create([
-            'category_id' => $lens->id,
-            'name' => 'Sony FE 50mm f/1.8',
-            'rent_price' => 75000,
-            'penalty_fee' => 25000,
-        ]);
+            // 2. Tambahkan Barang Contoh untuk setiap kategori
+            // Kita buat 2 barang per kategori sebagai contoh
+            for ($i = 1; $i <= 2; $i++) {
+                Gear::create([
+                    'category_id' => $category->id,
+                    'name'        => $category->name . " Seri " . $i,
+                    'unit_code'   => $category->generateNewCode(), // Panggil fungsi sakti di sini
+                    'rent_price'  => 100000 * $i,
+                    'penalty_fee' => 50000,
+                    'status'      => 'available',
+                    'condition_status' => 'baik',
+                ]);
+            }
+        }
     }
 }

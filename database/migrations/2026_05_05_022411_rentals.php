@@ -34,20 +34,33 @@ return new class extends Migration
     {
         Schema::create('rentals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Siapa yang sewa
-            $table->foreignId('gear_id')->constrained()->onDelete('cascade'); // Alat apa yang disewa
+            // Unique Identifier untuk konfirmasi WA
+            $table->string('booking_code')->unique(); 
             
-            $table->date('start_date'); // Tanggal mulai booking
-            $table->date('end_date');   // Tanggal seharusnya kembali
-            $table->timestamp('returned_at')->nullable(); // Tanggal aktual kembali
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('gear_id')->constrained()->onDelete('cascade');
+
+            $table->string('whatsapp');
+            $table->text('alamat');
+            $table->time('start_time'); // Untuk detail jam ambil
+            $table->string('purpose');
+            $table->string('payment_method');
             
-            $table->integer('total_price'); // Total harga sewa di awal
-            $table->integer('penalty_amount')->default(0); // Denda yang terakumulasi
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->timestamp('returned_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable(); // Ditambahkan untuk log pembatalan
             
-            // Status: booking (dipesan), active (barang dibawa), completed (kembali), cancelled (batal)
+            $table->integer('total_price'); 
+            $table->integer('penalty_amount')->default(0);
+            $table->integer('total_days_late')->default(0); // Ditambahkan
+            $table->integer('final_amount')->nullable(); // Nilai terkunci saat selesai
+
+            $table->string('foto_ktp')->nullable(); // Simpan path foto KTP
+
             $table->enum('status', ['booking', 'active', 'completed', 'cancelled'])->default('booking');
             
-            $table->text('note')->nullable(); // Catatan jaminan (KTP/SIM) atau kondisi barang
+            $table->text('note')->nullable();
             $table->timestamps();
         });
     }
@@ -58,5 +71,6 @@ return new class extends Migration
     public function down(): void
     {
         //
+        Schema::dropIfExists('rentals');
     }
 };

@@ -40,8 +40,6 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained(); // Kategori alat (relasi ke tabel categories)
             $table->string('name');
             $table->string('unit_code')->unique(); // Kode unik untuk setiap unit (otomatis dari kategori + nomor urut)
-            $table->string('category'); // Kamera, Lensa, Tripod, dll
-            $table->integer('total_units')->default(1); // Jumlah stok fisik
             $table->integer('rent_price'); // Harga sewa per hari
             $table->integer('penalty_fee'); // Denda per hari jika telat
             $table->text('description')->nullable();
@@ -50,12 +48,11 @@ return new class extends Migration
             $table->enum('status', ['available', 'booked', 'rented', 'maintenance'])
                 ->default('available'); // Status alat (available (tersedia), booked (dipesan), rented (disewa), maintenance (perbaikan))
 
-            $table->enum('condition', ['baik', 'rusak', 'hilang', 'maintenance'])
+            $table->enum('condition_status', ['baik', 'rusak', 'hilang', 'maintenance'])
                 ->default('baik'); // Kondisi alat (baik, rusak, hilang, maintenance)
 
             $table->string('image_path')->nullable(); // Path untuk menyimpan gambar alat
             $table->softDeletes(); // Fitur Soft Delete agar data aman
-            $table->timestamps();
         });
     }
 

@@ -2,175 +2,185 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Rental;
-use Carbon\Carbon;
+use App\Models\Gear;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
-// =========================================================
-
-// CONTROLLER RENTAL = Controller logika bisnis terkait :
-//  1. Transaksi penyewaan, 
-//  2. Fitur menyelesaikan transaksi (mengembalikan barang) dan,
-//  3. Menghitung denda jika terlambat. 
-// Controller ini akan berinteraksi dengan model Rental untuk memperbarui status penyewaan dan menghitung denda.
-
-// =========================================================
-
+use Carbon\Carbon;
 
 class RentalController extends Controller
 {
     /**
-     * 1. TAMPILIN DAFTAR RENTAL AKTIF + ESTIMASI DENDA
-     * Buat dashboard admin
+     * Dashboard Admin: Ringkasan Aktivitas (Fitur 1) & Monitoring (Fitur 2)
      */
-    public function indexActive()
+    public function index()
     {
-        $rentals = Rental::with('gear', 'user')
-            ->where('status', 'active')
-            ->get()
-            ->map(function ($rental) {
-                // Hitung estimasi denda real-time buat dashboard
-                $penalty = $this->calculatePenalty($rental);
-                $rental->estimated_penalty = $penalty['total'];
-                $rental->days_late = $penalty['hari'];
-                return $rental;
-            });
+        // 1. Ringkasan Aktivitas Harian
+        $stats = [
+            'ambil_hari_ini'   => Rental::where('status', 'booking')->whereDate('start_date', today())->count(),
+            'kembali_hari_ini' => Rental::where('status', 'active')->whereDate('end_date', today())->count(),
+            'terlambat'        => Rental::where('status', 'active')->whereDate('end_date', '<', today())->count(),
+            'total_booking'    => Rental::where('status', 'booking')->count(),
+        ];
 
-        return response()->json([
-            'data' => $rentals,
-            'total_estimasi_denda' => $rentals->sum('estimated_penalty')
-        ]);
+        // 2. Data Tabel Transaksi
+        $permohonan = Rental::with(['gear.category', 'user'])
+            ->where('status', 'booking')
+            ->orderBy('start_date', 'asc')
+            ->get();
+
+        $monitoring = Rental::with(['gear', 'user'])
+            ->where('status', 'active')
+            ->orderBy('end_date', 'asc')
+            ->get();
+
+        return view('admin.rentals.dashboard', compact('stats', 'permohonan', 'monitoring'));
     }
 
     /**
-     * 2. LIHAT DETAIL TAGIHAN SEBELUM SELESAI
-     * Admin buka dulu buat mastiin denda sebelum klik "Selesai"
+     * Tampilkan Form Sewa (Sisi Customer)
      */
-    public function showInvoice($id)
+    public function create()
     {
-        $rental = Rental::with('gear', 'user')->findOrFail($id);
+        // Ambil gear dengan relasi rental untuk cek jadwal di frontend
+        // Di RentalController@create
+        $gears = Gear::where('status', 'available')
+                    ->where('condition_status', 'baik')
+                    ->get();
 
-        if ($rental->status === 'completed') {
-            return response()->json([
-                'message' => 'Rental sudah selesai',
-                'data' => $rental
-            ], 400);
+        return view('rentals.create', compact('gears'));
+    }
+
+    /**
+     * Proses Simpan Sewa (Sisi Customer)
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'gear_id'        => 'required|exists:gears,id',
+            'start_date'     => 'required|date|after_or_equal:today',
+            'start_time'     => 'required|date_format:H:i',
+            'duration'       => 'required|integer|min:1',
+            'foto_ktp'       => 'required|image|max:2048',
+            'whatsapp'       => 'required',
+            'alamat'         => 'required',
+            'purpose'        => 'required',
+            'payment_method' => 'required',
+        ]);
+
+        // Pencegahan Overlap (Sisi Server)
+        $startReq = Carbon::parse($request->start_date);
+        $endReq   = $startReq->copy()->addDays((int) $request->duration);
+
+        $isConflict = Rental::where('gear_id', $request->gear_id)
+            ->whereIn('status', ['booking', 'active'])
+            ->where(function ($query) use ($startReq, $endReq) {
+                $query->where('start_date', '<', $endReq)
+                      ->where('end_date', '>', $startReq);
+            })->exists();
+
+        if ($isConflict) {
+            return back()->with('error', 'Maaf, jadwal alat sudah terisi pada tanggal tersebut.');
         }
 
-        $penalty = $this->calculatePenalty($rental);
-        $totalSewa = $rental->total_price; // Asumsi udah ada di tabel
-        $grandTotal = $totalSewa + $penalty['total'];
+        // Simpan foto KTP ke storage local (bukan public) untuk keamanan
+        if ($request->hasFile('foto_ktp')) {
+            // gunakan ktp karena root local di app/private, jadi akan tersimpan di storage/app/private/ktp
+            $fotoPath = $request->file('foto_ktp')->store('ktp', 'local');
+            $validatedData['foto_ktp'] = $fotoPath;
+        }
+        
+        $gear = Gear::findOrFail($request->gear_id);
 
-        return response()->json([
-            'rental' => $rental,
-            'rincian_biaya' => [
-                'biaya_sewa' => $totalSewa,
-                'hari_terlambat' => $penalty['hari'],
-                'denda_per_hari' => $rental->gear->penalty_fee ?? 50000,
-                'total_denda' => $penalty['total'],
-                'grand_total' => $grandTotal
-            ]
+        $rental = Rental::create([
+            'user_id'        => auth()->id(),
+            'gear_id'        => $request->gear_id,
+            'whatsapp'       => $request->whatsapp,
+            'alamat'         => $request->alamat,
+            'start_time'     => $request->start_time,
+            'purpose'        => $request->purpose,
+            'payment_method' => $request->payment_method,
+            'start_date'     => $request->start_date,
+            'end_date'       => $endReq,
+            'duration'       => (int) $request->duration,
+            'total_price'    => (int) $gear->rent_price * (int) $request->duration,
+            'status'         => 'booking',
+            'foto_ktp'       => $fotoPath,
+            'note'           => 'Pendaftaran Online',
         ]);
+
+        return redirect()->route('rentals.success', $rental->id);
     }
 
-    /**
-     * 3. SELESAIKAN SEWA - TOMBOL "SELESAI" DIKLIK ADMIN
-     * Ini yang ngunci denda final + ganti status
-     */
-    public function completeRental($id)
+    public function showSuccess($id)
     {
         $rental = Rental::with('gear')->findOrFail($id);
+        if ($rental->user_id !== auth()->id()) abort(403);
 
-        if ($rental->status === 'completed') {
-            return response()->json(['message' => 'Rental sudah diselesaikan sebelumnya'], 400);
-        }
-
-        if ($rental->status === 'cancelled') {
-            return response()->json(['message' => 'Rental sudah dibatalkan'], 400);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Hitung denda final pake waktu sekarang
-            $penalty = $this->calculatePenalty($rental);
-            
-            $rental->update([
-                'status' => 'completed',
-                'returned_at' => Carbon::now(),
-                'penalty_amount' => $penalty['total'],
-                'total_days_late' => $penalty['hari'],
-                'final_amount' => $rental->total_price + $penalty['total'], // Total akhir
-            ]);
-
-            // Balikin stok barang biar bisa disewa lagi
-            $rental->gear->increment('stock');
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Barang berhasil dikembalikan!',
-                'data' => $rental->fresh(), // Ambil data terbaru
-                'rincian' => [
-                    'biaya_sewa' => $rental->total_price,
-                    'hari_terlambat' => $penalty['hari'],
-                    'total_denda' => $penalty['total'],
-                    'total_bayar' => $rental->final_amount
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['message' => 'Gagal: ' . $e->getMessage()], 500);
-        }
+        return view('rentals.success', compact('rental'));
     }
 
     /**
-     * 4. BATALKAN SEWA
-     * Kalau customer batal sebelum ambil barang
+     * Aksi Admin: Verifikasi & Aktifkan Rental
      */
-    public function cancelRental($id)
+    public function konfirmasiPembayaran($id)
     {
         $rental = Rental::findOrFail($id);
 
-        if ($rental->status !== 'active') {
-            return response()->json(['message' => 'Hanya rental aktif yang bisa dibatalkan'], 400);
+        if ($rental->status !== 'booking') {
+            return back()->with('error', 'Status tidak valid.');
         }
 
-        // Kalau udah lewat start_date, mungkin kena cancel fee. Ini opsional
         $rental->update([
-            'status' => 'cancelled',
-            'cancelled_at' => Carbon::now()
+            'status' => 'active',
+            'note'   => $rental->note . ' | Aktif oleh Admin: ' . auth()->user()->name . ' pada ' . now()
         ]);
 
-        // Balikin stok karena batal
-        $rental->gear->increment('stock');
-
-        return response()->json(['message' => 'Rental berhasil dibatalkan']);
+        return back()->with('success', 'Rental berhasil diaktifkan!');
     }
 
     /**
-     * PRIVATE FUNCTION: HITUNG DENDA
-     * Dipake di semua method biar nggak copy paste rumus
-     * Ini isinya logika "gratis 2 jam" yang sama kayak di Command
+     * Aksi Admin: Selesaikan Rental & Hitung Denda
      */
-    private function calculatePenalty($rental)
+    public function selesaiRental($id)
     {
-        $dueDate = $rental->end_date; // Udah Carbon karena casts
-        $batasGratis = $dueDate->copy()->addHours(2);
-        $sekarang = Carbon::now();
+        $rental = Rental::findOrFail($id);
+        
+        // Logika denda dari Accessor Model (pastikan model punya penalty_details)
+        $penalty = $rental->penalty_details; 
 
-        if ($sekarang->gt($batasGratis)) {
-            $selisihJam = $sekarang->diffInHours($batasGratis);
-            $hariTerlambat = (int) ceil($selisihJam / 24); // 1-24 jam = 1 hari
-            $dendaPerHari = $rental->gear->penalty_fee ?? 50000;
-            
-            return [
-                'hari' => $hariTerlambat,
-                'total' => $hariTerlambat * $dendaPerHari
-            ];
+        $rental->update([
+            'status'          => 'completed',
+            'returned_at'     => now(),
+            'penalty_amount'  => $penalty['total'],
+            'total_days_late' => $penalty['days'],
+            'final_amount'    => $rental->total_price + $penalty['total'],
+        ]);
+
+        return back()->with('success', 'Rental selesai. Stok alat telah kembali.');
+    }
+
+    public function clearExpiredBookings()
+    {
+        Rental::where('status', 'booking')
+            ->where('created_at', '<', now()->subHours(24))
+            ->update(['status' => 'cancelled', 'note' => 'Expired otomatis']);
+
+        return back()->with('success', 'Booking kadaluarsa dibersihkan.');
+    }
+
+    public function viewKtp($id)
+    {
+        $rental = Rental::findOrFail($id);
+        
+        // Cek apakah file ada di storage/app/private/ktp
+        if (!\Storage::disk('local')->exists($rental->foto_ktp)) {
+            abort(404, 'File KTP tidak ditemukan di :' . $rental->foto_ktp);
         }
 
-        return ['hari' => 0, 'total' => 0];
+        $path = \Storage::disk('local')->path($rental->foto_ktp);
+
+        // Ambil file dan tampilkan sebagai gambar
+        return response()->file($path);
     }
 }
