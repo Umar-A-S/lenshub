@@ -72,4 +72,4 @@ class RentalSeeder extends Seeder
             'note' => 'Cek denda otomatis untuk unit ini',
         ]);
     }
-}
+} 

@@ -17,9 +17,10 @@ class GearConditionLog extends Model
 
     protected $fillable = [
         'gear_id',
-        'condition_before',
-        'condition_after',
-        'note'
+        'old_condition',
+        'new_condition',
+        'notes',
+        'changed_by'
     ];
 
     /**
@@ -28,5 +29,13 @@ class GearConditionLog extends Model
     public function gear()
     {
         return $this->belongsTo(Gear::class);
+    }
+
+    /**
+     * Relasi ke model User yang melakukan perubahan.
+     */
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
     }
 }

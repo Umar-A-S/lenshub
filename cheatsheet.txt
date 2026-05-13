@@ -1,0 +1,506 @@
+1. PERSIAPAN WAJIB
+
+### CSRF Token
+```blade
+@csrf
+```
+✔ **Wajib** di semua form agar tidak error 419
+
+### Method Spoofing
+```blade
+@method('PUT')
+@method('PATCH')
+@method('DELETE')
+```
+✔ Gunakan jika route bukan GET atau POST
+
+### Pesan Session
+```blade
+@if(session('success'))
+    <div class="alert alert-success">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger">
+        {{ session('error') }}
+    </div>
+@endif
+```
+
+---
+
+## 2. MANAJEMEN ALAT (GEARS)
+
+### A. Menampilkan Daftar Alat
+
+```blade
+@foreach($gears as $gear)
+    <div class="gear-item">
+        <h3>{{ $gear->name }}</h3>
+        <p>Kode: <strong>{{ $gear->unit_code }}</strong></p>
+        <p>Harga: <strong>Rp {{ number_format($gear->rent_price) }}/hari</strong></p>
+        <p>Kategori: {{ $gear->category->name }}</p>
+        <p>Status: <span class="badge">{{ ucfirst($gear->status) }}</span></p>
+        <img src="{{ asset('storage/' . $gear->image_path) }}" alt="{{ $gear->name }}">
+    </div>
+@endforeach
+
+@if($gears->isEmpty())
+    <p class="text-muted">Tidak ada alat tersedia</p>
+@endif
+```
+
+### B. Form Tambah Alat Baru
+
+**Action:** `{{ route('gears.store') }}`  
+**Method:** `POST`  
+**Penting:** Tambahkan `enctype="multipart/form-data"`
+
+```blade
+<form action="{{ route('gears.store') }}" method="POST" enctype="multipart/form-data">
+    @csrf
+    
+    <!-- Kategori -->
+    <div class="form-group">
+        <label for="category_id">Kategori</label>
+        <select name="category_id" id="category_id" required>
+            <option value="">-- Pilih Kategori --</option>
+            @foreach($categories as $cat)
+                <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>
+                    {{ $cat->name }}
+                </option>
+            @endforeach
+        </select>
+        @error('category_id')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Nama -->
+    <div class="form-group">
+        <label for="name">Nama Alat</label>
+        <input type="text" name="name" id="name" value="{{ old('name') }}" required>
+        @error('name')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Harga Sewa -->
+    <div class="form-group">
+        <label for="rent_price">Harga Sewa/Hari (Rp)</label>
+        <input type="number" name="rent_price" id="rent_price" value="{{ old('rent_price') }}" required>
+        @error('rent_price')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Denda -->
+    <div class="form-group">
+        <label for="penalty_fee">Denda/Hari (Rp)</label>
+        <input type="number" name="penalty_fee" id="penalty_fee" value="{{ old('penalty_fee') }}" required>
+        @error('penalty_fee')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Foto -->
+    <div class="form-group">
+        <label for="photo">Foto</label>
+        <input type="file" name="photo" id="photo" accept="image/*">
+        @error('photo')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <button type="submit" class="btn btn-primary">Simpan</button>
+</form>
+```
+
+### C. Update Status Gear
+
+**Set ke Available:**
+```blade
+<form action="{{ route('gears.update-status', [$gear->id, 'available']) }}" method="POST">
+    @csrf @method('PATCH')
+    <button type="submit" class="btn btn-success">Set Available</button>
+</form>
+```
+
+**Set ke Maintenance:**
+```blade
+<form action="{{ route('gears.update-status', [$gear->id, 'maintenance']) }}" method="POST">
+    @csrf @method('PATCH')
+    <button type="submit" class="btn btn-warning">Set Maintenance</button>
+</form>
+```
+
+### D. Hapus Gear
+
+```blade
+<form action="{{ route('gears.destroy', $gear->id) }}" method="POST" style="display:inline;">
+    @csrf @method('DELETE')
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin ingin hapus?')">
+        Hapus
+    </button>
+</form>
+```
+
+### E. Update Kondisi Gear
+
+```blade
+<form action="{{ route('gears.update-condition', $gear->id) }}" method="POST">
+    @csrf @method('PATCH')
+    
+    <div class="form-group">
+        <label>Kondisi</label>
+        <select name="condition" required>
+            <option value="baik" {{ old('condition') == 'baik' ? 'selected' : '' }}>Baik</option>
+            <option value="rusak" {{ old('condition') == 'rusak' ? 'selected' : '' }}>Rusak</option>
+            <option value="hilang" {{ old('condition') == 'hilang' ? 'selected' : '' }}>Hilang</option>
+        </select>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Update Kondisi</button>
+</form>
+```
+
+---
+
+## 3. TRANSAKSI PENYEWAAN (RENTALS)
+
+### A. Form Booking Penyewaan
+
+**Action:** `{{ route('rentals.store') }}`  
+**Method:** `POST`  
+**Penting:** Tambahkan `enctype="multipart/form-data"` untuk KTP
+
+```blade
+<form action="{{ route('rentals.store') }}" method="POST" enctype="multipart/form-data">
+    @csrf
+    
+    <!-- Alat -->
+    <div class="form-group">
+        <label for="gear_id">Pilih Alat</label>
+        <select name="gear_id" id="gear_id" required>
+            @foreach($gears as $gear)
+                <option value="{{ $gear->id }}">
+                    {{ $gear->name }} ({{ $gear->unit_code }})
+                </option>
+            @endforeach
+        </select>
+        @error('gear_id')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Tanggal Mulai -->
+    <div class="form-group">
+        <label for="start_date">Tanggal Mulai</label>
+        <input type="date" name="start_date" id="start_date" value="{{ old('start_date') }}" required>
+        @error('start_date')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Jam Mulai -->
+    <div class="form-group">
+        <label for="start_time">Jam Mulai</label>
+        <input type="time" name="start_time" id="start_time" value="{{ old('start_time') }}" required>
+        @error('start_time')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Durasi (Hari) -->
+    <div class="form-group">
+        <label for="duration">Durasi (Hari)</label>
+        <input type="number" name="duration" id="duration" min="1" value="{{ old('duration') }}" required>
+        @error('duration')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="form-group">
+        <label for="whatsapp">No. WhatsApp</label>
+        <input type="text" name="whatsapp" id="whatsapp" value="{{ old('whatsapp') }}" required>
+        @error('whatsapp')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Alamat -->
+    <div class="form-group">
+        <label for="alamat">Alamat</label>
+        <textarea name="alamat" id="alamat" required>{{ old('alamat') }}</textarea>
+        @error('alamat')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Keperluan -->
+    <div class="form-group">
+        <label for="purpose">Keperluan</label>
+        <textarea name="purpose" id="purpose" required>{{ old('purpose') }}</textarea>
+        @error('purpose')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Metode Pembayaran -->
+    <div class="form-group">
+        <label for="payment_method">Metode Pembayaran</label>
+        <select name="payment_method" id="payment_method" required>
+            <option value="cash" {{ old('payment_method') == 'cash' ? 'selected' : '' }}>Tunai</option>
+            <option value="transfer" {{ old('payment_method') == 'transfer' ? 'selected' : '' }}>Transfer</option>
+            <option value="card" {{ old('payment_method') == 'card' ? 'selected' : '' }}>Kartu Kredit</option>
+        </select>
+        @error('payment_method')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <!-- Foto KTP -->
+    <div class="form-group">
+        <label for="foto_ktp">Foto KTP</label>
+        <input type="file" name="foto_ktp" id="foto_ktp" accept="image/*" required>
+        @error('foto_ktp')<span class="text-danger">{{ $message }}</span>@enderror
+    </div>
+
+    <button type="submit" class="btn btn-primary">Submit Booking</button>
+</form>
+```
+
+### B. Admin: Daftar Permohonan Booking
+
+```blade
+<table class="table">
+    <thead>
+        <tr>
+            <th>Booking Code</th>
+            <th>User</th>
+            <th>Alat</th>
+            <th>Tanggal Mulai</th>
+            <th>Harga</th>
+            <th>Status</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($permohonan as $rental)
+            <tr>
+                <td>{{ $rental->booking_code }}</td>
+                <td>{{ $rental->user->name }}</td>
+                <td>{{ $rental->gear->unit_code }}</td>
+                <td>{{ $rental->start_date->format('d/m/Y') }}</td>
+                <td>Rp {{ number_format($rental->total_price) }}</td>
+                <td><span class="badge badge-warning">Booking</span></td>
+                <td>
+                    <form action="{{ route('admin.rentals.aktifkan', $rental->id) }}" method="POST" style="display:inline;">
+                        @csrf @method('POST')
+                        <button type="submit" class="btn btn-sm btn-success">Aktifkan</button>
+                    </form>
+                </td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+```
+
+### C. Admin: Monitoring Penyewaan Aktif
+
+```blade
+<table class="table">
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Alat</th>
+            <th>Tanggal Kembali</th>
+            <th>Status</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($monitoring as $rental)
+            <tr class="{{ now()->gt($rental->end_date) ? 'table-danger' : '' }}">
+                <td>{{ $rental->user->name }}</td>
+                <td>{{ $rental->gear->unit_code }}</td>
+                <td>{{ $rental->end_date->format('d/m/Y H:i') }}</td>
+                <td>
+                    @if(now()->gt($rental->end_date))
+                        <span class="badge badge-danger">TERLAMBAT</span>
+                    @else
+                        <span class="badge badge-info">Aktif</span>
+                    @endif
+                </td>
+                <td>
+                    <form action="{{ route('admin.rentals.selesai', $rental->id) }}" method="POST" style="display:inline;">
+                        @csrf @method('POST')
+                        <button type="submit" class="btn btn-sm btn-primary">Terima Kembali</button>
+                    </form>
+                </td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+```
+
+### D. Status Badge Colors
+
+```blade
+@if($rental->status == 'booking')
+    <span class="badge badge-warning">⏳ Menunggu Pembayaran</span>
+@elseif($rental->status == 'active')
+    <span class="badge badge-info">📦 Sedang Disewa</span>
+@elseif($rental->status == 'completed')
+    <span class="badge badge-success">✓ Selesai</span>
+@elseif($rental->status == 'cancelled')
+    <span class="badge badge-secondary">✗ Dibatalkan</span>
+@endif
+```
+
+---
+
+## 4. AUTENTIKASI & ROLE
+
+### A. Proteksi Tampilan Berdasarkan Role
+
+```blade
+{{-- Hanya Admin --}}
+@if(auth()->user()->role == 'admin')
+    <a href="{{ route('admin.gears.index') }}" class="btn btn-primary">
+        Kelola Alat
+    </a>
+@endif
+
+{{-- Hanya Owner --}}
+@if(auth()->user()->role == 'owner')
+    <a href="{{ route('owner.dashboard') }}" class="btn btn-primary">
+        Dashboard Owner
+    </a>
+@endif
+
+{{-- Hanya User Biasa --}}
+@if(auth()->user()->role == 'user')
+    <a href="{{ route('rentals.create') }}" class="btn btn-primary">
+        Sewa Sekarang
+    </a>
+@endif
+```
+
+### B. Menampilkan Info User Login
+
+```blade
+<div class="user-info">
+    <p>Nama: <strong>{{ auth()->user()->name }}</strong></p>
+    <p>Email: {{ auth()->user()->email }}</p>
+    <p>Role: <span class="badge">{{ ucfirst(auth()->user()->role) }}</span></p>
+</div>
+```
+
+### C. Tombol Logout
+
+```blade
+<form method="POST" action="{{ route('logout') }}" style="display:inline;">
+    @csrf
+    <button type="submit" class="btn btn-danger">
+        Keluar
+    </button>
+</form>
+```
+
+---
+
+## 5. FORM VALIDATION
+
+### Display Error Message
+
+```blade
+@if($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+```
+
+### Field-Level Error
+
+```blade
+<div class="form-group">
+    <label for="name">Nama</label>
+    <input type="text" 
+           name="name" 
+           id="name" 
+           value="{{ old('name') }}" 
+           class="form-control @error('name') is-invalid @enderror">
+    @error('name')
+        <span class="invalid-feedback">{{ $message }}</span>
+    @enderror
+</div>
+```
+
+### Old Input (Prevent Data Loss)
+
+```blade
+<input type="text" name="category" value="{{ old('category') }}">
+
+<select name="status">
+    <option value="available" {{ old('status') == 'available' ? 'selected' : '' }}>Available</option>
+    <option value="rented" {{ old('status') == 'rented' ? 'selected' : '' }}>Rented</option>
+</select>
+
+<textarea>{{ old('description') }}</textarea>
+```
+
+---
+
+## 6. UTILITY FUNCTIONS
+
+### Format Uang (Rupiah)
+
+```blade
+Harga: Rp {{ number_format($gear->rent_price) }}
+Harga: Rp {{ number_format($gear->rent_price, 0, ',', '.') }}
+```
+
+### Format Tanggal
+
+```blade
+{{ $rental->start_date->format('d/m/Y') }}
+{{ $rental->start_date->format('d M Y H:i') }}
+{{ $rental->created_at->diffForHumans() }}
+```
+
+### Asset Path
+
+```blade
+<!-- Image dari storage -->
+<img src="{{ asset('storage/' . $gear->image_path) }}" alt="{{ $gear->name }}">
+
+<!-- Static assets (CSS, JS) -->
+<img src="{{ asset('images/logo.png') }}">
+```
+
+### Route URL
+
+```blade
+<!-- Route dengan parameter -->
+<a href="{{ route('gears.show', $gear->id) }}">Lihat Detail</a>
+
+<!-- Route dengan multiple parameters -->
+<a href="{{ route('gears.update-status', [$gear->id, 'maintenance']) }}">Set Maintenance</a>
+
+<!-- Current URL -->
+<a href="{{ URL::current() }}">Current Page</a>
+```
+
+### Conditional Classes
+
+```blade
+<div class="alert @if($rental->status == 'active') alert-info @else alert-warning @endif">
+    Status: {{ $rental->status }}
+</div>
+
+<!-- Shorter syntax -->
+<div class="alert {{ $rental->status == 'active' ? 'alert-info' : 'alert-warning' }}">
+    Status: {{ $rental->status }}
+</div>
+```
+
+---
+
+## 💡 QUICK TIPS
+
+| Task | Code |
+|------|------|
+| Pergi ke page sebelumnya | `<a href="javascript:history.back()">Back</a>` |
+| Konfirmasi sebelum delete | `onclick="return confirm('Yakin?')"` |
+| Disable button saat submit | `onclick="this.disabled=true; this.form.submit();"` |
+| Format uang indo | `number_format($value, 0, ',', '.')` |
+| Check user authenticated | `@auth ... @endauth` |
+| Check user guest | `@guest ... @endguest` |
+| Debug variable | `<pre>{{ dd($variable) }}</pre>` |
+
+---
+
+**📌 Template ini siap copy-paste langsung ke `.blade.php` files!**

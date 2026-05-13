@@ -40,7 +40,6 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained(); // Kategori alat (relasi ke tabel categories)
             $table->string('name');
             $table->string('unit_code')->unique(); // Kode unik untuk setiap unit (otomatis dari kategori + nomor urut)
-            $table->integer('total_units')->default(1); // Jumlah stok fisik
             $table->integer('rent_price'); // Harga sewa per hari
             $table->integer('penalty_fee'); // Denda per hari jika telat
             $table->text('description')->nullable();

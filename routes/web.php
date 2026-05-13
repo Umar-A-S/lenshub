@@ -10,94 +10,92 @@ use App\Http\Controllers\RentalController;
 
 /*
 |--------------------------------------------------------------------------
-| 1. HALAMAN UTAMA & AUTH (LOGOUT/LOGIN)
+| 1. HALAMAN UTAMA & AUTH
 |--------------------------------------------------------------------------
-| Bagian ini mengatur apa yang pertama kali dilihat pengunjung.
 */
 
 Route::get('/', function () {
-    // Kalau buka web, langsung diarahkan ke halaman login
     return view('auth.login');
 });
 
 Route::get('/register', function () {
-    // Kalau buka halaman register, langsung diarahkan ke halaman login (karena kita tidak pakai fitur register)
     return redirect('/login');
 })->name('register');
 
-// Mengambil pengaturan akun dari file auth.php (bawaan Laravel)
 require __DIR__.'/auth.php';
 
-
 /*
 |--------------------------------------------------------------------------
-| 2. AREA KHUSUS PEMILIK (OWNER)
+| 2. AREA UMUM (DASHBOARD & PROFILE)
 |--------------------------------------------------------------------------
-| Hanya bisa dibuka oleh pengguna yang sudah login dan punya peran 'owner'.
 */
 
-Route::middleware(['auth', 'role:owner'])->prefix('owner')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('owner.dashboard');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Rencana kedepan: Laporan & Statistik (saat ini masih dimatikan)
-    // Route::get('/laporan-keuangan', [ReportController::class, 'index']);
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| 3. AREA KHUSUS ADMIN (PENGELOLA)
+| 3. AREA CUSTOMER (PENYEWA)
 |--------------------------------------------------------------------------
-| Bagian ini untuk admin mengelola transaksi, denda, dan inventaris alat.
 */
 
-Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
-    
-    // --- Dashboard Admin ---
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-
-    // --- Manajemen Alat (Gear) ---
-    // Di sini admin bisa Tambah, Edit, Update Status, dan Hapus alat.
-    Route::controller(GearController::class)->prefix('gears')->group(function () {
-        Route::get('/', 'index')->name('gears.index');          // Lihat daftar alat
-        Route::post('/', 'store')->name('gears.store');         // Simpan alat baru
-        Route::get('/{gear}/edit', 'edit')->name('gears.edit'); // Buka form edit
-        Route::put('/{gear}', 'update')->name('gears.update');   // Proses simpan perubahan
-        Route::delete('/{gear}', 'destroy')->name('gears.destroy'); // Hapus alat
-
-        // Fitur ganti status (Tersedia/Rusak/Maintenance)
-        Route::patch('/{gear}/status/{status}', 'updateStatus')->name('gears.update-status');
-        Route::patch('/{gear}/condition/{condition}', 'updateCondition')->name('gears.update-condition');
-    });
-
-    // --- Manajemen Transaksi (Rental) ---
-    // Mengatur penyewaan, pengembalian, dan denda otomatis.
-    Route::controller(RentalController::class)->prefix('rentals')->group(function () {
-        Route::get('/', 'index')->name('rentals.index');
-        Route::post('/{rental}/return', 'returnGear')->name('rentals.return');
-        
-        // Tombol rahasia admin untuk simulasi telat balikin (untuk tes denda)
-        Route::patch('/{rental}/simulate-overdue', 'simulateOverdue')->name('rentals.simulate');
-    });
-
+Route::middleware(['auth'])->group(function () {
+    Route::get('/sewa', [RentalController::class, 'create'])->name('rentals.create');
+    Route::post('/sewa', [RentalController::class, 'store'])->name('rentals.store');
+    Route::get('/sewa/success/{id}', [RentalController::class, 'showSuccess'])->name('rentals.success');
 });
 
+/*
+|--------------------------------------------------------------------------
+| 4. AREA KHUSUS ADMIN (PENGELOLA)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    
+    // Dashboard Admin & Manajemen Sewa
+    Route::get('rentals/dashboard', [RentalController::class, 'index'])->name('rentals.dashboard');
+    Route::post('rentals/{id}/aktifkan', [RentalController::class, 'konfirmasiPembayaran'])->name('rentals.aktifkan');
+    Route::post('rentals/{id}/selesai', [RentalController::class, 'selesaiRental'])->name('rentals.selesai');
+    Route::post('rentals/clear-expired', [RentalController::class, 'clearExpiredBookings'])->name('rentals.clear-expired');
+
+    // View KTP
+    Route::get('view-ktp/{id}', [RentalController::class, 'viewKtp'])->name('view-ktp');
+
+    // Manajemen Alat (Gears)
+    Route::controller(GearController::class)->prefix('gears')->name('gears.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{gear}/edit', 'edit')->name('edit');
+        Route::put('/{gear}', 'update')->name('update');
+        Route::delete('/{gear}', 'destroy')->name('destroy');
+        Route::patch('/{gear}/status/{status}', 'updateStatus')->name('update-status');
+        Route::patch('/{id}/update-condition', 'updateCondition')->name('update-condition');
+    });
+});
 
 /*
 |--------------------------------------------------------------------------
-| 4. FITUR PEMBANTU / DEBUGGING (KHUSUS PENGEMBANG)
+| 5. AREA KHUSUS OWNER (OWNER)
 |--------------------------------------------------------------------------
-| Fitur ini sebaiknya dihapus atau dimatikan jika web sudah online (Production).
 */
 
-// Tombol manual untuk menyuruh "Robot" mengecek denda saat ini juga
+Route::middleware(['auth', 'role:owner'])->prefix('owner')->name('owner.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+});
+
+/*
+|--------------------------------------------------------------------------
+| 6. DEBUGGING & UTILITY
+|--------------------------------------------------------------------------
+*/
+
 Route::post('/run-penalty-check', function () {
     Artisan::call('app:auto-calculate-penalty');
     return back()->with('status', 'Robot Penalty telah dijalankan!');
-});
-
-// Halaman rahasia untuk melihat data mentah transaksi (Cek error data)
-Route::get('/debug-rentals', function () {
-    $rentals = Rental::with('gear', 'user')->get();
-    return view('debug-rentals', compact('rentals'));
 });

@@ -32,9 +32,17 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
 
+        User::factory()->create([
+            'name' => 'Umar Alfi',
+            'email' => 'umar@example.com',
+            'password' => bcrypt('userpassword'),
+            'role' => 'user',
+        ]);
+
+
         $this->call([
             InventorySeeder::class,
-            RentalSeeder::class,
+            //RentalSeeder::class,
         ]);
     }
 }
