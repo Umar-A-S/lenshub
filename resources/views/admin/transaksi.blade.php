@@ -19,19 +19,19 @@
     <div class="mb-8 grid grid-cols-4 gap-6">
         <div class="rounded-[28px] bg-white p-6 shadow-sm">
             <p class="text-slate-500">Total Transaksi Selesai</p>
-            <h3 class="mt-3 text-4xl font-bold">{{ $transactions->count() }}</h3>
+            <h3 class="mt-3 text-2xl font-bold">{{ $transactions->count() }}</h3>
         </div>
         <div class="rounded-[28px] bg-white p-6 shadow-sm">
             <p class="text-slate-500">Total Pendapatan</p>
-            <h3 class="mt-3 text-3xl font-bold text-green-600">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</h3>
+            <h3 class="mt-3 text-xl font-bold text-green-600">Rp {{ number_format($totalPendapatan, 0, ',', '.') }}</h3>
         </div>
         <div class="rounded-[28px] bg-white p-6 shadow-sm">
             <p class="text-slate-500">Sedang Aktif</p>
-            <h3 class="mt-3 text-4xl font-bold text-blue-700">{{ $aktif }}</h3>
+            <h3 class="mt-3 text-2xl font-bold text-blue-700">{{ $aktif }}</h3>
         </div>
         <div class="rounded-[28px] bg-white p-6 shadow-sm">
             <p class="text-slate-500">Total Denda Terkumpul</p>
-            <h3 class="mt-3 text-3xl font-bold text-red-600">Rp {{ number_format($totalDenda, 0, ',', '.') }}</h3>
+            <h3 class="mt-3 text-xl font-bold text-red-600">Rp {{ number_format($totalDenda, 0, ',', '.') }}</h3>
         </div>
     </div>
 
@@ -99,7 +99,7 @@
                     @empty
                         <tr>
                             <td colspan="10" class="px-5 py-16 text-center text-slate-400">
-                                <p class="text-4xl mb-3">📂</p>
+                                <p class="text-4xl mb-3"></p>
                                 <p>Belum ada riwayat transaksi</p>
                             </td>
                         </tr>

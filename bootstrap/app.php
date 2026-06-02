@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         function (
             $middleware
         ) {
+            $middleware->trustProxies(at: '*');
 
             $middleware
                 ->alias([

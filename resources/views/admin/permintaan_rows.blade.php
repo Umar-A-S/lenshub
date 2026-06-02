@@ -2,13 +2,13 @@
 {{-- Partial view: hanya <tr> rows — diinject realtime ke <tbody id="tabel-permintaan"> --}}
 
 @forelse ($permintaan as $p)
-    <tr class="border-t border-slate-100 hover:bg-slate-50">
-        <td class="px-5 py-4 font-medium text-blue-700">{{ $p->kode_sewa }}</td>
-        <td class="px-5 py-4 font-medium">{{ $p->nama_penyewa }}</td>
-        <td class="px-5 py-4 text-slate-500">{{ $p->whatsapp }}</td>
-        <td class="px-5 py-4">{{ $p->alat_nama ?: '-' }}</td>
-        <td class="px-5 py-4">
-            <span class="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700">
+    <tr class="border-b border-[var(--border-default)] hover:bg-[#F9FAFB] even:bg-[#F9FAFB]/50 transition-colors text-center">
+        <td class="px-1 py-1 font-semibold text-[var(--color-primary)] text-xs">{{ $p->kode_sewa }}</td>
+        <td class="px-5 py-5 text-xs text-[var(--text-primary)] font-medium">{{ $p->nama_penyewa }}</td>
+        <td class="px-5 py-5 text-xs text-[var(--text-secondary)]">{{ $p->whatsapp }}</td>
+        <td class="px-5 py-5 text-xs font-bold text-[var(--text-primary)]">{{ $p->alat_nama ?: '-' }}</td>
+        <td class="px-5 py-5">
+            <span class="inline-block rounded-[var(--border-radius-badge)] text-xs text-[#2563EB] uppercase font-bold tracking-wider">
                 {{ match($p->durasi) {
                     '12jam' => '12 Jam', '1hari' => '1 Hari',
                     '3hari' => '3 Hari', '5hari' => '5 Hari',
@@ -16,38 +16,38 @@
                 } }}
             </span>
         </td>
-        <td class="px-5 py-4">{{ \Carbon\Carbon::parse($p->mulai)->format('d M Y H:i') }}</td>
-        <td class="px-2 py-4">
+        <td class="px-1 py-1 text-xs text-[var(--text-secondary)]">{{ \Carbon\Carbon::parse($p->mulai)->format('d M Y H:i') }}</td>
+        <td class="px-5 py-5">
             @if($p->logistik === 'cod')
-                <div>
-                    <span class="rounded-full bg-orange-50 text-orange-700 px-2 py-1 text-xs font-medium">
+                <div class="inline-block">
+                    <span class="rounded-[var(--border-radius-badge)] text-[#92400E] px-3 py-1 text-xs font-bold uppercase tracking-wider">
                         C.O.D
                     </span>
                     @if($p->alamat_pengiriman)
-                        <p class="mt-1 text-xs text-slate-500 max-w-[160px] leading-snug">
+                        <p class="mt-2 text-xs text-[var(--text-secondary)] max-w-[200px] leading-snug">
                             {{ $p->alamat_pengiriman }}
                         </p>
                     @else
-                        <p class="mt-1 text-xs text-red-400 italic">Alamat belum diisi</p>
+                        <p class="mt-2 text-xs text-[var(--color-accent-red)] italic">Alamat belum diisi</p>
                     @endif
                 </div>
             @else
-                <span class="bg-green-50 text-green-700 px-2 py-1 text-xs font-medium">
+                <span class="inline-block rounded-[var(--border-radius-badge)] text-[#16A34A] px-1 py-1 text-xs font-bold uppercase tracking-wider">
                     Ambil di Kantor
                 </span>
             @endif
         </td>
-        <td class="px-5 py-4 font-semibold">Rp {{ number_format($p->total, 0, ',', '.') }}</td>
-        <td class="px-5 py-4">
-            <div class="flex gap-2">
+        <td class="px-1 py-1 font-bold text-[var(--text-primary)] font-mono-numbers text-xs">Rp {{ number_format($p->total, 0, ',', '.') }}</td>
+        <td class="px-5 py-5">
+            <div class="flex flex-col gap-1 items-center">
                 <button
                     onclick="openKonfirmasi({{ $p->id }}, '{{ addslashes($p->nama_penyewa) }}', '{{ addslashes($p->alat_nama) }}', '{{ number_format($p->total, 0, ',', '.') }}')"
-                    class="rounded-xl bg-[#073090] px-4 py-2 text-xs text-white hover:bg-blue-800 transition">
+                    class="rounded-[var(--border-radius-btn)] bg-[var(--bg-sidebar)] hover:bg-[#1e2a5e]/90 px-2 py-1 text-xs text-white font-semibold transition w-full">
                     Proses Konfirmasi
                 </button>
                 <button
                     onclick="tolakPermintaan({{ $p->id }})"
-                    class="rounded-xl bg-red-50 px-4 py-2 text-xs text-red-600 hover:bg-red-100 transition">
+                    class="rounded-[var(--border-radius-btn)] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#DC2626] px-2 py-1 text-xs font-semibold transition w-full">
                     Tolak
                 </button>
             </div>
@@ -55,9 +55,9 @@
     </tr>
 @empty
     <tr>
-        <td colspan="9" class="px-5 py-16 text-center text-slate-400">
+        <td colspan="9" class="px-5 py-16 text-center text-[var(--text-muted)]">
             <p class="text-4xl mb-3">📭</p>
-            <p>Belum ada permintaan pesanan masuk</p>
+            <p class="text-[var(--fs-body)]">Belum ada permintaan pesanan masuk</p>
         </td>
     </tr>
 @endforelse

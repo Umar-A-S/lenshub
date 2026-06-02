@@ -4,36 +4,36 @@
 @section('subtitle', 'Hari ini, ' . now()->translatedFormat('d F Y'))
 
 @section('content')
-<div class="space-y-10">
+<div class="p-4 sm:p-6 space-y-6">
 
     {{-- CARD RINGKASAN --}}
     <div class="grid grid-cols-4 gap-6">
-        <div class="rounded-[30px] bg-white p-7 shadow-sm">
-            <p class="text-slate-500">Aktif Terlambat</p>
-            <h2 class="mt-4 text-5xl font-bold">{{ $aktifTerlambat }}</h2>
+        <div class="rounded-[15px] bg-white p-5 shadow-sm">
+            <p class="text-slate-600">Aktif Terlambat</p>
+            <h2 class="mt-4 text-2xl font-bold">{{ $aktifTerlambat }}</h2>
         </div>
 
-        <div class="rounded-[30px] bg-white p-7 shadow-sm">
-            <p class="text-slate-500">Denda Berjalan</p>
-            <h2 class="mt-4 text-4xl font-bold">Rp {{ number_format($dendaBerjalan, 0, ',', '.') }}</h2>
+        <div class="rounded-[15px] bg-white p-5 shadow-sm">
+            <p class="text-slate-600">Denda Berjalan</p>
+            <h2 class="mt-4 text-2xl font-bold">Rp {{ number_format($dendaBerjalan, 0, ',', '.') }}</h2>
         </div>
 
-        <div class="rounded-[30px] bg-white p-7 shadow-sm">
-            <p class="text-slate-500">Total Denda Bulan Ini</p>
-            <h2 class="mt-4 text-4xl font-bold">Rp {{ number_format($totalDenda, 0, ',', '.') }}</h2>
+        <div class="rounded-[15px] bg-white p-5 shadow-sm">
+            <p class="text-slate-600">Total Denda Bulan Ini</p>
+            <h2 class="mt-4 text-2xl font-bold">Rp {{ number_format($totalDenda, 0, ',', '.') }}</h2>
         </div>
 
-        <div class="rounded-[30px] bg-white p-7 shadow-sm">
-            <p class="text-slate-500">Total Denda Dilunasi</p>
-            <h2 class="mt-4 text-5xl font-bold">{{ $dendaLunas }}</h2>
+        <div class="rounded-[15px] bg-white p-5 shadow-sm">
+            <p class="text-slate-600">Total Denda Dilunasi</p>
+            <h2 class="mt-4 text-2xl font-bold">{{ $dendaLunas }}</h2>
         </div>
     </div>
 
     {{-- DENDA AKTIF --}}
-    <div class="rounded-[32px] bg-white p-8 shadow-sm">
+    <div class="rounded-[15px] bg-white p-8 shadow-sm">
         <div class="mb-6 flex items-center justify-between gap-4">
             <div>
-                <h2 class="text-3xl font-bold text-red-600">Denda Aktif Saat Ini</h2>
+                <h2 class="text-2xl font-bold text-black-600">Denda Aktif Saat Ini</h2>
                 <p class="mt-1 text-sm text-slate-500">Baris di bawah ini adalah denda yang statusnya masih <span class="font-semibold">belum lunas</span>.</p>
             </div>
         </div>
@@ -74,7 +74,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-5 py-16 text-center text-slate-400">
-                                <p class="text-4xl mb-3">✅</p>
+                                <p class="text-4xl mb-3"></p>
                                 <p>Tidak ada denda aktif</p>
                             </td>
                         </tr>
@@ -85,9 +85,9 @@
     </div>
 
     {{-- RIWAYAT --}}
-    <div class="rounded-[32px] bg-white p-8 shadow-sm">
+    <div class="rounded-[15px] bg-white p-8 shadow-sm">
         <div class="mb-6">
-            <h2 class="text-3xl font-bold">Riwayat Denda Bulan Ini</h2>
+            <h2 class="text-2xl font-bold">Riwayat Denda Bulan Ini</h2>
             <p class="mt-1 text-sm text-slate-500">Data ini menampilkan denda yang sudah lunas, lengkap dengan metode bayar dan waktu pelunasan.</p>
         </div>
 
@@ -123,7 +123,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-5 py-16 text-center text-slate-400">
-                                <p class="text-4xl mb-3">📂</p>
+                                <p class="text-4xl mb-3"></p>
                                 <p>Belum ada riwayat denda bulan ini</p>
                             </td>
                         </tr>

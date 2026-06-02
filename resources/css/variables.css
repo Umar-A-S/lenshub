@@ -1,0 +1,44 @@
+:root {
+    --color-primary:       #2B4EFF;
+    --color-primary-dark:  #1A3ACC;
+    --color-accent-orange: #FF6B2B;
+    --color-accent-green:  #22C55E;
+    --color-accent-red:    #EF4444;
+    --color-accent-yellow: #F59E0B;
+
+    --bg-sidebar:          #1E2A5E;
+    --bg-page:             #F4F6FB;
+    --bg-card:             #FFFFFF;
+    --bg-dark-section:     #1E2A5E;
+
+    --text-primary:        #111827;
+    --text-secondary:      #6B7280;
+    --text-on-dark:        #FFFFFF;
+    --text-muted:          #9CA3AF;
+
+    --border-default:      #E5E7EB;
+    --border-radius-card:  12px;
+    --border-radius-btn:   8px;
+    --border-radius-badge: 999px;
+
+    --fs-hero:    2.5rem;
+    --fs-h1:      1.5rem;
+    --fs-h2:      1.125rem;
+    --fs-body:    0.875rem;
+    --fs-small:   0.5rem;
+}
+
+body {
+    background-color : var(--bg-page);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+}
+
+h1, h2, h3, h4, h5, h6, .nav-text {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.font-mono-numbers {
+    font-family: 'DM Mono', monospace;
+}
+

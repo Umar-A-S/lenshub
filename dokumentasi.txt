@@ -1,0 +1,18 @@
+Dokumentasi Setup Proyek
+
+1. Testing Awal:
+   - Saat menjalankan `php artisan test`, terdeteksi masalah kompatibilitas PHP.
+   - Error: "Your Composer dependencies require a PHP version ">= 8.4.0". You are running 8.3.6."
+   - Kesimpulan: Proyek ini memerlukan PHP 8.4 atau lebih baru. Lingkungan lokal saat ini menggunakan 8.3.6.
+
+2. Docker Setup:
+   - Proyek dibungkus menggunakan Docker Compose dengan 3 service:
+     - app: PHP-FPM 8.4 (mengatasi masalah kompatibilitas).
+     - nginx: Web server untuk melayani aplikasi.
+     - db: MariaDB untuk database.
+
+3. Cara Menjalankan:
+   - Pastikan Docker dan Docker Compose sudah terinstal.
+   - Jalankan `docker-compose up -d`.
+   - Jalankan migrasi: `docker-compose exec app php artisan migrate`.
+   - Akses aplikasi melalui localhost.

@@ -10,20 +10,29 @@
 
 <body class="min-h-screen bg-gradient-to-b from-[#0b3aa9] to-[#b8c8eb]">
 
-    <header class="sticky top-0 z-50 rounded-b-[2rem] bg-white shadow-sm">
-        <div class="mx-auto flex max-w-7xl items-center justify-between px-10 py-6">
+    <header class="sticky top-0 z-50 rounded-b-[2rem] bg-white shadow-sm" x-data="{ mobileMenuOpen: false }">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-10 md:py-6">
 
-            {{-- LOGO --}}
-            <a href="{{ route('home') }}" class="flex flex-col">
-                <span class="text-2xl font-bold text-slate-900">LensHub</span>
-                <span class="text-sm text-slate-500">Photography & Video Gear</span>
-            </a>
+            <div class="flex items-center gap-4">
+                {{-- MOBILE MENU TOGGLE --}}
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-900 md:hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                </button>
 
-            {{-- NAV LINKS --}}
-            <nav class="flex items-center gap-10 text-slate-900">
-                <a href="{{ route('home') }}" class="hover:text-blue-700">Home</a>
-                <a href="{{ route('produk.index') }}" class="hover:text-blue-700">Produk</a>
-                <a href="{{ route('rules') }}" class="hover:text-blue-700">Rules</a>
+                {{-- LOGO --}}
+                <a href="{{ route('home') }}" class="flex flex-col">
+                    <span class="text-xl font-bold text-slate-900 md:text-2xl">LensHub</span>
+                    <span class="hidden text-xs text-slate-500 sm:block">Photography & Video Gear</span>
+                </a>
+            </div>
+
+            {{-- NAV LINKS (DESKTOP) --}}
+            <nav class="hidden items-center gap-8 text-sm font-medium text-slate-900 md:flex lg:gap-10">
+                <a href="{{ route('home') }}" class="transition hover:text-blue-700">Home</a>
+                <a href="{{ route('produk.index') }}" class="transition hover:text-blue-700">Produk</a>
+                <a href="{{ route('rules') }}" class="transition hover:text-blue-700">Rules</a>
             </nav>
 
             {{-- POJOK KANAN: LOGIN / PROFIL --}}
@@ -113,6 +122,16 @@
             </div>
 
         </div>
+
+        {{-- MOBILE MENU CONTENT --}}
+        <div x-show="mobileMenuOpen" @click.outside="mobileMenuOpen = false" x-transition
+            class="absolute left-4 right-4 top-full mt-2 rounded-2xl bg-white p-4 shadow-2xl md:hidden">
+            <nav class="flex flex-col gap-2">
+                <a href="{{ route('home') }}" class="rounded-xl px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700">🏠 Home</a>
+                <a href="{{ route('produk.index') }}" class="rounded-xl px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700">📷 Produk</a>
+                <a href="{{ route('rules') }}" class="rounded-xl px-4 py-3 text-slate-700 hover:bg-blue-50 hover:text-blue-700">📜 Rules</a>
+            </nav>
+        </div>
     </header>
 
     {{-- Notifikasi akun nonaktif --}}
@@ -128,7 +147,7 @@
         </div>
     @endif
 
-    <main class="mx-auto max-w-7xl px-10 py-10">
+    <main class="mx-auto max-w-7xl px-6 py-8 md:px-10 md:py-16">
         @yield('content')
     </main>
 

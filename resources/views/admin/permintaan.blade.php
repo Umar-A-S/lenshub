@@ -7,51 +7,74 @@
     <div class="p-8">
 
         {{-- SEARCH --}}
-        <form action="{{ route('permintaan.index') }}" method="GET" class="mb-8 flex items-center gap-5">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari kode, nama penyewa..."
-                class="h-[58px] flex-1 rounded-2xl bg-white px-8 shadow-sm outline-none">
-            <input type="date" name="tanggal" value="{{ request('tanggal') }}"
-                class="h-[58px] w-[220px] rounded-2xl bg-white px-5 shadow-sm">
-            <button type="submit" class="h-[58px] rounded-2xl bg-[#073090] px-8 text-white">Cari</button>
-            <a href="{{ route('permintaan.index') }}"
-                class="flex h-[58px] items-center rounded-2xl bg-gray-300 px-8">Reset</a>
+        <form action="{{ route('permintaan.index') }}" method="GET" class="bg-[var(--bg-card)] rounded-[var(--border-radius-card)] p-6 shadow-xs border border-[var(--border-default)] mb-8">
+            <div class="flex flex-wrap gap-4 items-end">
+                {{-- Search Input --}}
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase">
+                        <i class="fas fa-search mr-2"></i>Cari Permintaan
+                    </label>
+                    <input type="text" name="search" value="{{ request('search') }}" 
+                        placeholder="Kode, nama penyewa..."
+                        class="w-full px-4 py-2.5 border border-[var(--border-default)] rounded-[var(--border-radius-btn)] focus:border-[var(--color-primary)] outline-none transition-all duration-200">
+                </div>
+
+                {{-- Date Filter --}}
+                <div class="w-full xs:w-48">
+                    <label class="block text-xs font-semibold text-[var(--text-secondary)] mb-2 uppercase">
+                        <i class="fas fa-calendar mr-2"></i>Tanggal
+                    </label>
+                    <input type="date" name="tanggal" value="{{ request('tanggal') }}"
+                        class="w-full px-4 py-2.5 border border-[var(--border-default)] rounded-[var(--border-radius-btn)] focus:border-[var(--color-primary)] outline-none transition-all duration-200">
+                </div>
+
+                {{-- Action Buttons --}}
+                <div class="flex gap-2">
+                    <button type="submit" class="bg-[var(--bg-sidebar)] hover:bg-[#1e2a5e]/90 text-white font-semibold py-2.5 px-6 rounded-[var(--border-radius-btn)] transition-all duration-300 shadow-xs hover:shadow-lg flex items-center justify-center gap-2">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="{{ route('permintaan.index') }}" class="bg-[#F3F4F6] hover:bg-[#E5E7EB] text-[var(--text-secondary)] font-semibold py-2.5 px-6 rounded-[var(--border-radius-btn)] transition-all duration-300 shadow-sm flex items-center justify-center gap-2">
+                        <i class="fas fa-redo"></i>
+                    </a>
+                </div>
+            </div>
         </form>
 
         {{-- TABEL PERMINTAAN --}}
-        <div class="rounded-[32px] bg-white p-8 shadow-sm">
+        <div class="bg-[var(--bg-card)] rounded-[var(--border-radius-card)] p-6 shadow-sm border border-[var(--border-default)]">
             <div class="mb-6 flex items-center justify-between">
-                <h3 class="text-2xl font-bold text-slate-800">PERMINTAAN PESANAN</h3>
+                <h3 class="text-[var(--fs-h2)] font-bold text-[var(--text-primary)]">PERMINTAAN PESANAN</h3>
                 {{-- Badge live + count --}}
                 <div class="flex items-center gap-2">
                     <span id="live-badge"
-                        class="hidden items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
-                        <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500"></span>
+                        class="hidden items-center gap-1.5 rounded-[var(--border-radius-badge)] border border-[#DCFCE7] bg-[#DCFCE7] px-3 py-1.5 text-sm font-bold text-[#16A34A]">
+                        <span class="inline-block h-2 w-2 animate-pulse rounded-full bg-[#16A34A]"></span>
                         Live
                     </span>
-                    <span class="text-sm text-slate-500">
-                        <span id="total-pending" class="font-bold text-slate-800">{{ $permintaan->count() }}</span>
+                    <span class="text-[var(--fs-body)] text-[var(--text-secondary)]">
+                        <span id="total-pending" class="font-bold text-[var(--text-primary)]">{{ $permintaan->count() }}</span>
                         permintaan
                     </span>
                 </div>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-slate-100">
-                <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500">
+            <div class="overflow-y-hidden rounded-[var(--border-radius-card)] border border-[var(--border-default)]">
+                <table class="w-full text-[var(--fs-body)]">
+                    <thead class="bg-[#1E2A5E]/5 text-[var(--bg-sidebar)] uppercase text-xs tracking-wider text-center">
                         <tr>
-                            <th class="px-4 py-4 text-left">Kode</th>
-                            <th class="px-5 py-4 text-left">Nama Penyewa</th>
-                            <th class="px-5 py-4 text-left">No. WA</th>
-                            <th class="px-5 py-4 text-left">Alat</th>
-                            <th class="px-5 py-4 text-left">Durasi</th>
-                            <th class="px-5 py-4 text-left">Mulai</th>
-                            <th class="px-5 py-4 text-left">Logistik & Lokasi</th>
-                            <th class="px-5 py-4 text-left">Total</th>
-                            <th class="px-5 py-4 text-left">Aksi</th>
+                            <th class="px-4 py-4">Kode</th>
+                            <th class="px-5 py-4">Nama Penyewa</th>
+                            <th class="px-5 py-4">No. WA</th>
+                            <th class="px-5 py-4">Alat</th>
+                            <th class="px-5 py-4">Durasi</th>
+                            <th class="px-5 py-4">Mulai</th>
+                            <th class="px-5 py-4">Logistik & Lokasi</th>
+                            <th class="px-5 py-4">Total</th>
+                            <th class="px-5 py-4">Aksi</th>
                         </tr>
                     </thead>
                     {{-- id="tabel-permintaan" — target inject realtime --}}
-                    <tbody id="tabel-permintaan">
+                    <tbody class="divide-y divide-[var(--border-default)]" id="tabel-permintaan">
                         @include('admin.permintaan_rows', ['permintaan' => $permintaan])
                     </tbody>
                 </table>
@@ -60,7 +83,7 @@
     </div>
 
     {{-- MODAL KONFIRMASI --}}
-    <div id="modalKonfirmasi" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div id="modalKonfirmasi" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-xs">
         <div class="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl">
             <div class="mb-6 flex items-center justify-between">
                 <h3 class="text-xl font-bold text-slate-800">Proses Konfirmasi Sewa</h3>
@@ -70,9 +93,9 @@
 
             <div class="mb-6 rounded-2xl bg-slate-50 p-4">
                 <p class="font-bold text-slate-900" id="konfNama"></p>
-                <p class="mt-1 text-sm text-slate-500">Alat: <span id="konfAlat" class="font-medium text-slate-700"></span>
+                <p class="mt-1 text-xs text-slate-500">Alat: <span id="konfAlat" class="font-medium text-slate-700"></span>
                 </p>
-                <p class="text-sm text-slate-500">Total: <span class="font-bold text-blue-700">Rp <span
+                <p class="text-xs text-slate-500">Total: <span class="font-bold text-blue-700">Rp <span
                             id="konfTotal"></span></span></p>
             </div>
 
@@ -80,7 +103,7 @@
                 @csrf
 
                 <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">
+                    <label class="mb-2 block text-xs font-medium text-slate-700">
                         Jaminan Fisik yang Ditahan <span class="text-red-500">*</span>
                         <span class="text-xs font-normal text-slate-400">(pilih satu atau lebih)</span>
                     </label>
@@ -105,19 +128,19 @@
                                 <input type="checkbox" name="jaminan_fisik[]" value="{{ $val }}"
                                     class="rounded text-blue-600 focus:ring-blue-400"
                                     {{ $val === 'lainnya' ? 'onchange="toggleLainnya(this)"' : '' }}>
-                                <span class="text-sm">{{ $opt['icon'] }} {{ $opt['label'] }}</span>
+                                <span class="text-xs">{{ $opt['icon'] }} {{ $opt['label'] }}</span>
                             </label>
                         @endforeach
                     </div>
                     <div id="lainnyaField" class="mt-2 hidden">
                         <input type="text" name="jaminan_lainnya" placeholder="Sebutkan jaminan lainnya..."
-                            class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300">
                     </div>
                     <p id="jaminanError" class="mt-1 hidden text-xs text-red-500">Pilih minimal satu jaminan.</p>
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Metode Pembayaran <span
+                    <label class="mb-1 block text-xs font-medium text-slate-700">Metode Pembayaran <span
                             class="text-red-500">*</span></label>
                     <select name="metode_bayar" required
                         class="w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-300">
@@ -129,9 +152,9 @@
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Catatan Kondisi Alat</label>
+                    <label class="mb-1 block text-xs font-medium text-slate-700">Catatan Kondisi Alat</label>
                     <textarea name="catatan_kondisi" rows="3" placeholder="Contoh: Kondisi baik, semua aksesoris lengkap..."
-                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
+                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"></textarea>
                 </div>
 
                 <div class="flex gap-3 pt-2">
@@ -141,7 +164,7 @@
                     </button>
                     <button type="submit"
                         class="flex-1 rounded-2xl bg-[#073090] py-3 font-semibold text-white transition hover:bg-blue-800">
-                        ✅ Aktifkan Transaksi & Serah Terima
+                        Aktifkan & Serah Terima
                     </button>
                 </div>
             </form>
@@ -150,11 +173,11 @@
 
     {{-- TOAST NOTIF REALTIME (Admin) --}}
     <div id="admin-toast"
-        class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+        class="fixed bottom-6 right-6 z-50 hidden max-w-xs rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
         <div class="flex items-start gap-3">
-            <span class="text-2xl">🔔</span>
+            <span class="text-2xl"></span>
             <div class="flex-1">
-                <p class="text-sm font-semibold text-slate-900">Permintaan Baru Masuk!</p>
+                <p class="text-xs font-semibold text-slate-900">Permintaan Baru Masuk!</p>
                 <p class="mt-0.5 text-xs text-slate-500" id="admin-toast-body"></p>
             </div>
             <button onclick="document.getElementById('admin-toast').classList.add('hidden')"
